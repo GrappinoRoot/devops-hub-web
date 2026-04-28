@@ -1,0 +1,120 @@
+@if (error(); as e) {
+  <p class="pg-error">{{ e }}</p>
+}
+
+<div class="pg-grid">
+  @for (p of providers(); track p.kind) {
+    <article class="pg-card" [class.coming-soon]="p.status === 'coming-soon'">
+      <header class="pg-card-head">
+        <h3>{{ p.name }}</h3>
+        @if (p.status === 'coming-soon') {
+          <span class="pg-pill pg-pill-muted">Coming soon</span>
+        } @else if (connectionsFor(p.kind).length > 0) {
+          <span class="pg-pill pg-pill-ok">Connected</span>
+        } @else {
+          <span class="pg-pill">Not connected</span>
+        }
+      </header>
+      <p class="pg-desc">{{ p.description }}</p>
+
+      @if (connectionsFor(p.kind); as conns) {
+        @if (conns.length > 0) {
+          <ul class="pg-conn-list">
+            @for (c of conns; track c.id) {
+              <li>
+                <span class="pg-conn-label">
+                  {{ c.label }}
+                  <small>· {{ c.authType }}</small>
+                  @if (c.account) { <small>· {{ c.account }}</small> }
+                </span>
+                <button
+                  type="button"
+                  class="pg-btn pg-btn-ghost"
+                  [disabled]="busy() === p.kind"
+                  (click)="disconnect(c)"
+                >
+                  Disconnect
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      }
+
+      @if (p.status !== 'coming-soon') {
+        <div class="pg-actions">
+          @if (p.oauth) {
+            <button
+              type="button"
+              class="pg-btn pg-btn-primary"
+              [disabled]="busy() === p.kind"
+              (click)="startOauth(p.kind)"
+            >
+              Connect with {{ p.name }}
+            </button>
+          }
+          @if (p.pat) {
+            <button
+              type="button"
+              class="pg-btn"
+              [disabled]="busy() === p.kind"
+              (click)="togglePatForm(p.kind)"
+            >
+              {{ patForm() === p.kind ? 'Cancel' : 'Use access token' }}
+            </button>
+          }
+        </div>
+
+        @if (patForm() === p.kind) {
+          <form
+            class="pg-pat-form"
+            (ngSubmit)="submitPat(p.kind)"
+          >
+            <label>
+              <span>Label</span>
+              <input
+                type="text"
+                [ngModel]="patLabel()"
+                (ngModelChange)="patLabel.set($event)"
+                name="label"
+                placeholder="My GitHub account"
+              />
+            </label>
+            <label>
+              <span>Token</span>
+              <input
+                type="password"
+                [ngModel]="patToken()"
+                (ngModelChange)="patToken.set($event)"
+                name="token"
+                required
+                autocomplete="off"
+              />
+            </label>
+            @if (p.kind === 'gitlab' || p.kind === 'jenkins') {
+              <label>
+                <span>Base URL</span>
+                <input
+                  type="url"
+                  [ngModel]="patBaseUrl()"
+                  (ngModelChange)="patBaseUrl.set($event)"
+                  name="baseUrl"
+                  placeholder="https://gitlab.example.com"
+                />
+              </label>
+            }
+            <div class="pg-actions">
+              <button
+                type="submit"
+                class="pg-btn pg-btn-primary"
+                [disabled]="busy() === p.kind || !patToken().trim()"
+              >
+                Save token
+              </button>
+            </div>
+          </form>
+        }
+      }
+    </article>
+  }
+</div>

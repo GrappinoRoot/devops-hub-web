@@ -1,0 +1,49 @@
+.app-topbar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 20px;
+  background: #0f172a;
+  color: #f8fafc;
+
+  .brand { font-weight: 700; letter-spacing: 0.02em; }
+
+  .nav {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+
+    a {
+      padding: 6px 12px;
+      border-radius: 6px;
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 14px;
+
+      &:hover { background: rgba(255, 255, 255, 0.06); color: #f8fafc; }
+      &.active { background: rgba(255, 255, 255, 0.12); color: #f8fafc; }
+    }
+  }
+
+  .user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+    font-size: 14px;
+
+    button {
+      font: inherit;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid #475569;
+      background: transparent;
+      color: #f8fafc;
+      cursor: pointer;
+
+      &:hover { background: rgba(255, 255, 255, 0.08); }
+    }
+  }
+}
+
+.app-main { display: block; }

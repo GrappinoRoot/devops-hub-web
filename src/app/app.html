@@ -1,0 +1,18 @@
+<header class="app-topbar">
+  <div class="brand">Devops Hub</div>
+  @if (auth.isAuthenticated()) {
+    <nav class="nav">
+      <a routerLink="/pipelines" routerLinkActive="active">Pipelines</a>
+      <a routerLink="/integrations" routerLinkActive="active">Integrations</a>
+    </nav>
+    <div class="user">
+      <span>{{ auth.state()?.email }}</span>
+      <button type="button" (click)="logout()">Logout</button>
+    </div>
+  }
+</header>
+<main class="app-main">
+  <router-outlet />
+</main>
+<app-toast-host />
+
