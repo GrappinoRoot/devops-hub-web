@@ -20,6 +20,7 @@ import { PipelineListNodeComponent } from './nodes/pipeline-list-node.component'
 import { EmptyStateNodeComponent } from './nodes/empty-state-node.component';
 import { ProviderGridNodeComponent } from './nodes/provider-grid-node.component';
 import { SelectNodeComponent } from './nodes/select-node.component';
+import { StatGridNodeComponent } from './nodes/stat-grid-node.component';
 
 @Component({
   selector: 'ui-node',
@@ -35,6 +36,7 @@ import { SelectNodeComponent } from './nodes/select-node.component';
     EmptyStateNodeComponent,
     ProviderGridNodeComponent,
     SelectNodeComponent,
+    StatGridNodeComponent,
   ],
   template: `
     @switch (node.type) {
@@ -48,6 +50,7 @@ import { SelectNodeComponent } from './nodes/select-node.component';
       @case ('empty-state') { <ui-empty-state-node [node]="node" /> }
       @case ('provider-grid') { <ui-provider-grid-node [node]="node" /> }
       @case ('select') { <ui-select-node [node]="node" /> }
+      @case ('stat-grid') { <ui-stat-grid-node [node]="node" /> }
       @default {
         <div class="ui-node-unknown">
           unknown node type: {{ node.type }} ({{ node.id }})

@@ -6,9 +6,8 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import type { RepositoryDto, UiNode } from '@devops-hub/contracts';
-import { environment } from '../../../environments/environment';
+import { PipelinesApiService } from '../../core/api/pipelines-api.service';
 import { UiEventBusService } from '../../core/ui/ui-event-bus.service';
 
 @Component({
@@ -30,7 +29,7 @@ import { UiEventBusService } from '../../core/ui/ui-event-bus.service';
 export class RepoPickerNodeComponent implements OnInit {
   @Input({ required: true }) node!: UiNode;
 
-  private readonly http = inject(HttpClient);
+  private readonly api = inject(PipelinesApiService);
   private readonly bus = inject(UiEventBusService);
   readonly repos = signal<RepositoryDto[]>([]);
 
@@ -39,10 +38,7 @@ export class RepoPickerNodeComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const source = this.node.binding?.source;
-    if (!source) return;
-    const url = source.startsWith('http') ? source : `${environment.apiBaseUrl}${source.replace(/^\/api/, '')}`;
-    this.http.get<RepositoryDto[]>(url).subscribe({
+    this.api.listRepositories().subscribe({
       next: (list) => this.repos.set(list),
       error: () => this.repos.set([]),
     });

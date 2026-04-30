@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import type { UiAction } from '@devops-hub/contracts';
-import { environment } from '../../../environments/environment';
+import { ApiUrlService } from '../api/api-url.service';
 import { ToastService } from './toast.service';
 import { UiEventBusService } from './ui-event-bus.service';
 
@@ -16,6 +16,7 @@ export class UiActionRunnerService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+  private readonly url = inject(ApiUrlService);
 
   async run(
     bus: UiEventBusService,
@@ -42,9 +43,7 @@ export class UiActionRunnerService {
         await this.router.navigateByUrl(action.to);
         return;
       case 'http': {
-        const url = action.url.startsWith('http')
-          ? action.url
-          : `${environment.apiBaseUrl}${action.url}`;
+        const url = this.url.build(action.url);
         try {
           const result = await firstValueFrom(
             this.http.request(action.method, url, { body: action.body }),

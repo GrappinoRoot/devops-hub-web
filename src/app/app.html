@@ -2,6 +2,7 @@
   <div class="brand">Devops Hub</div>
   @if (auth.isAuthenticated()) {
     <nav class="nav">
+      <a routerLink="/home" routerLinkActive="active">Overview</a>
       <a routerLink="/pipelines" routerLinkActive="active">Pipelines</a>
       <a routerLink="/integrations" routerLinkActive="active">Integrations</a>
     </nav>

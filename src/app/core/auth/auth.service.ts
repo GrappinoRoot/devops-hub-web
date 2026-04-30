@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, finalize, firstValueFrom, shareReplay, tap } from 'rxjs';
 import type {
@@ -7,7 +7,7 @@ import type {
   LoginDto,
   RegisterDto,
 } from '@devops-hub/contracts';
-import { environment } from '../../../environments/environment';
+import { ApiUrlService } from '../api/api-url.service';
 
 const STORAGE_KEY = 'devops-hub.auth';
 
@@ -27,18 +27,19 @@ export class AuthService {
   readonly tenantId = computed(() => this._state()?.tenantId ?? null);
   readonly accessToken = computed(() => this._state()?.accessToken ?? null);
 
-  constructor(private readonly http: HttpClient) {}
+  private readonly http = inject(HttpClient);
+  private readonly url = inject(ApiUrlService);
 
   async login(body: LoginDto): Promise<void> {
     const res = await firstValueFrom(
-      this.http.post<AuthResponse>(`${environment.apiBaseUrl}/auth/login`, body),
+      this.http.post<AuthResponse>(this.url.build('/auth/login'), body),
     );
     this.persist(res);
   }
 
   async register(body: RegisterDto): Promise<void> {
     const res = await firstValueFrom(
-      this.http.post<AuthResponse>(`${environment.apiBaseUrl}/auth/register`, body),
+      this.http.post<AuthResponse>(this.url.build('/auth/register'), body),
     );
     this.persist(res);
   }
@@ -66,7 +67,7 @@ export class AuthService {
       throw new Error('No refresh token available');
     }
     this.inFlightRefresh = this.http
-      .post<AuthTokens>(`${environment.apiBaseUrl}/auth/refresh`, {
+      .post<AuthTokens>(this.url.build('/auth/refresh'), {
         refreshToken: token,
       })
       .pipe(

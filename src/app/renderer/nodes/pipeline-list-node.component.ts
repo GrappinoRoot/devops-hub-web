@@ -16,7 +16,7 @@ import type {
   PipelineRunDto,
   UiNode,
 } from '@devops-hub/contracts';
-import { environment } from '../../../environments/environment';
+import { ApiUrlService } from '../../core/api/api-url.service';
 import { RealtimeService } from '../../core/realtime/realtime.service';
 import { UiEventBusService } from '../../core/ui/ui-event-bus.service';
 
@@ -109,6 +109,7 @@ export class PipelineListNodeComponent implements OnInit, OnDestroy {
   @Input({ required: true }) node!: UiNode;
 
   private readonly http = inject(HttpClient);
+  private readonly apiUrl = inject(ApiUrlService);
   private readonly realtime = inject(RealtimeService);
   private readonly bus = inject(UiEventBusService);
   private readonly router = inject(Router);
@@ -194,9 +195,7 @@ export class PipelineListNodeComponent implements OnInit, OnDestroy {
     const source = this.node.binding?.source;
     if (!source) return;
     this.loading.set(true);
-    const url = source.startsWith('http')
-      ? source
-      : `${environment.apiBaseUrl}${source.replace(/^\/api/, '')}`;
+    const url = this.apiUrl.build(source);
     let params = new HttpParams();
     const bound = (this.node.binding?.params ?? {}) as Record<string, unknown>;
     for (const [k, v] of Object.entries(bound)) {

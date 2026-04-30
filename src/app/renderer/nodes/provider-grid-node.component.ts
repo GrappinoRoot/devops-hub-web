@@ -9,17 +9,17 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import type {
   CreatePatIntegrationDto,
   IntegrationSummary,
   OauthStartDto,
-  OauthStartResponse,
   ProviderKind,
   UiNode,
 } from '@devops-hub/contracts';
-import { environment } from '../../../environments/environment';
+import { ApiUrlService } from '../../core/api/api-url.service';
+import { ErrorMessageService } from '../../core/api/error-message.service';
+import { IntegrationsApiService } from '../../core/api/integrations-api.service';
 import { UiEventBusService } from '../../core/ui/ui-event-bus.service';
 
 interface ProviderCardSpec {
@@ -41,7 +41,9 @@ interface ProviderCardSpec {
 export class ProviderGridNodeComponent implements OnInit {
   @Input({ required: true }) node!: UiNode;
 
-  private readonly http = inject(HttpClient);
+  private readonly api = inject(IntegrationsApiService);
+  private readonly apiUrl = inject(ApiUrlService);
+  private readonly errors = inject(ErrorMessageService);
   private readonly bus = inject(UiEventBusService);
 
   readonly integrations = signal<IntegrationSummary[]>([]);
@@ -65,14 +67,12 @@ export class ProviderGridNodeComponent implements OnInit {
   }
 
   async reload(): Promise<void> {
-    const source = this.node.binding?.source ?? '/api/integrations';
-    const url = this.absolute(source);
     try {
-      const list = await firstValueFrom(this.http.get<IntegrationSummary[]>(url));
+      const list = await firstValueFrom(this.api.list());
       this.integrations.set(list);
       this.error.set(null);
     } catch (err) {
-      this.error.set(this.toMessage(err));
+      this.error.set(this.errors.format(err));
     }
   }
 
@@ -82,17 +82,12 @@ export class ProviderGridNodeComponent implements OnInit {
     try {
       const body: OauthStartDto = {
         provider: kind,
-        redirectUri: `${environment.apiBaseUrl}/integrations/oauth/${kind}/callback`,
+        redirectUri: this.apiUrl.build(`/integrations/oauth/${kind}/callback`),
       };
-      const res = await firstValueFrom(
-        this.http.post<OauthStartResponse>(
-          `${environment.apiBaseUrl}/integrations/oauth/start`,
-          body,
-        ),
-      );
+      const res = await firstValueFrom(this.api.startOauth(body));
       window.location.assign(res.authorizeUrl);
     } catch (err) {
-      this.error.set(this.toMessage(err));
+      this.error.set(this.errors.format(err));
       this.busy.set(null);
     }
   }
@@ -115,17 +110,12 @@ export class ProviderGridNodeComponent implements OnInit {
         token: this.patToken().trim(),
         ...(this.patBaseUrl().trim() ? { baseUrl: this.patBaseUrl().trim() } : {}),
       };
-      await firstValueFrom(
-        this.http.post<IntegrationSummary>(
-          `${environment.apiBaseUrl}/integrations/pat`,
-          body,
-        ),
-      );
+      await firstValueFrom(this.api.createPat(body));
       this.patForm.set(null);
       await this.reload();
       this.bus.emit('integrations.changed', this.node.id, { kind });
     } catch (err) {
-      this.error.set(this.toMessage(err));
+      this.error.set(this.errors.format(err));
     } finally {
       this.busy.set(null);
     }
@@ -135,30 +125,15 @@ export class ProviderGridNodeComponent implements OnInit {
     if (!confirm(`Disconnect ${integration.label}?`)) return;
     this.busy.set(integration.provider);
     try {
-      await firstValueFrom(
-        this.http.delete<void>(
-          `${environment.apiBaseUrl}/integrations/${integration.id}`,
-        ),
-      );
+      await firstValueFrom(this.api.remove(integration.id));
       await this.reload();
       this.bus.emit('integrations.changed', this.node.id, {
         kind: integration.provider,
       });
     } catch (err) {
-      this.error.set(this.toMessage(err));
+      this.error.set(this.errors.format(err));
     } finally {
       this.busy.set(null);
     }
-  }
-
-  private absolute(source: string): string {
-    return source.startsWith('http')
-      ? source
-      : `${environment.apiBaseUrl}${source.replace(/^\/api/, '')}`;
-  }
-
-  private toMessage(err: unknown): string {
-    const e = err as { error?: { message?: string }; message?: string };
-    return e?.error?.message ?? e?.message ?? 'unknown error';
   }
 }

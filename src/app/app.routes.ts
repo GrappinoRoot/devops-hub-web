@@ -8,6 +8,14 @@ export const routes: Routes = [
       import('./features/auth/login-page.component').then((m) => m.LoginPageComponent),
   },
   {
+    path: 'home',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/dashboard/home-page.component').then(
+        (m) => m.HomePageComponent,
+      ),
+  },
+  {
     path: 'pipelines',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -31,6 +39,6 @@ export const routes: Routes = [
         (m) => m.RunDetailsPageComponent,
       ),
   },
-  { path: '', pathMatch: 'full', redirectTo: 'pipelines' },
-  { path: '**', redirectTo: 'pipelines' },
+  { path: '', pathMatch: 'full', redirectTo: 'home' },
+  { path: '**', redirectTo: 'home' },
 ];

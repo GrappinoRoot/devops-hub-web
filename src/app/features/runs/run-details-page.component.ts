@@ -6,10 +6,11 @@ import {
   signal,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import type { PipelineRunDto } from '@devops-hub/contracts';
-import { environment } from '../../../environments/environment';
+import { PipelinesApiService } from '../../core/api/pipelines-api.service';
+import { ErrorMessageService } from '../../core/api/error-message.service';
+import { ToastService } from '../../core/ui/toast.service';
 
 @Component({
   selector: 'app-run-details-page',
@@ -29,9 +30,21 @@ import { environment } from '../../../environments/environment';
             <span class="badge" [class]="r.status">{{ r.status }}</span>
             <h1>{{ r.name }}</h1>
           </div>
-          <a class="open-ext" [href]="r.htmlUrl" target="_blank" rel="noopener">
-            Open on provider ↗
-          </a>
+          <div class="actions">
+            @if (canRerun(r)) {
+              <button
+                type="button"
+                class="ui-button"
+                [disabled]="rerunning()"
+                (click)="rerun(r.id)"
+              >
+                {{ rerunning() ? 'Re-running…' : 'Re-run' }}
+              </button>
+            }
+            <a class="open-ext" [href]="r.htmlUrl" target="_blank" rel="noopener">
+              Open on provider ↗
+            </a>
+          </div>
         </header>
 
         <dl class="grid">
@@ -85,6 +98,11 @@ import { environment } from '../../../environments/environment';
     `h1 { margin: 0; font-size: 22px; color: #0f172a; }`,
     `.open-ext { color: #1d4ed8; text-decoration: none; font-size: 14px; }`,
     `.open-ext:hover { text-decoration: underline; }`,
+    `.actions { display: flex; align-items: center; gap: 12px; }`,
+    `.ui-button { border: 1px solid #1e293b; background: #1e293b; color: #fff;
+                  padding: 6px 14px; border-radius: 6px; cursor: pointer; font: inherit; }`,
+    `.ui-button:disabled { opacity: 0.6; cursor: not-allowed; }`,
+    `.ui-button:hover:not(:disabled) { filter: brightness(1.1); }`,
     `.grid { display: grid; grid-template-columns: max-content 1fr; gap: 8px 24px;
             border-top: 1px solid #e2e8f0; padding-top: 16px; }`,
     `dt { color: #64748b; font-size: 13px; padding-top: 4px; }`,
@@ -102,11 +120,14 @@ import { environment } from '../../../environments/environment';
 })
 export class RunDetailsPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly http = inject(HttpClient);
+  private readonly api = inject(PipelinesApiService);
+  private readonly errors = inject(ErrorMessageService);
+  private readonly toast = inject(ToastService);
 
   readonly run = signal<PipelineRunDto | null>(null);
   readonly loading = signal<boolean>(true);
   readonly error = signal<string | null>(null);
+  readonly rerunning = signal<boolean>(false);
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -115,19 +136,41 @@ export class RunDetailsPageComponent implements OnInit {
       this.loading.set(false);
       return;
     }
-    this.http
-      .get<PipelineRunDto>(`${environment.apiBaseUrl}/pipelines/runs/${id}`)
-      .subscribe({
-        next: (r) => {
-          this.run.set(r);
-          this.loading.set(false);
-        },
-        error: (e) => {
-          this.error.set(
-            e?.status === 404 ? 'Run not found' : String(e?.message ?? e),
-          );
-          this.loading.set(false);
-        },
-      });
+    this.fetchRun(id);
+  }
+
+  canRerun(r: PipelineRunDto): boolean {
+    if (r.provider !== 'github') return false;
+    return r.status !== 'in_progress' && r.status !== 'queued';
+  }
+
+  rerun(id: string): void {
+    this.rerunning.set(true);
+    this.api.rerunRun(id).subscribe({
+      next: () => {
+        this.toast.show('success', 'Re-run triggered. New run will appear after the next sync.');
+        this.rerunning.set(false);
+        this.fetchRun(id);
+      },
+      error: (e) => {
+        this.toast.show('error', this.errors.format(e, 'Re-run failed'));
+        this.rerunning.set(false);
+      },
+    });
+  }
+
+  private fetchRun(id: string): void {
+    this.api.getRun(id).subscribe({
+      next: (r) => {
+        this.run.set(r);
+        this.loading.set(false);
+      },
+      error: (e) => {
+        this.error.set(
+          e?.status === 404 ? 'Run not found' : this.errors.format(e),
+        );
+        this.loading.set(false);
+      },
+    });
   }
 }
